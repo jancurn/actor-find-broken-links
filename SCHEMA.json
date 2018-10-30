@@ -4,10 +4,16 @@
   "schemaVersion": 1,
   "properties": {
     "baseUrl": {
-      "title": "Start URL",
+      "title": "Website URL",
       "type": "string",
-      "description": "The website URL to crawl. Only URLs pages in the sub-directory will be probed.",
+      "description": "The URL to crawl. Only URLs pages in the sub-directory will be probed.",
       "prefill": "https://www.example.com/"
+    },
+    "maxPages": {
+      "title": "Max pages",
+      "type": "number",
+      "description": "The maximum number of pages that will be crawled. If empty, the number is not limited.",
+      "prefill": 1000
     }
   },
   "required": ["baseUrl"]
