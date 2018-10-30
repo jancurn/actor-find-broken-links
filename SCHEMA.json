@@ -1,0 +1,14 @@
+{
+  "title": "Schema for actor-find-broken-links input",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "baseUrl": {
+      "title": "Start URL",
+      "type": "string",
+      "description": "The website URL to crawl. Only URLs pages in the sub-directory will be probed.",
+      "prefill": "https://www.example.com/"
+    }
+  },
+  "required": ["baseUrl"]
+}
