@@ -1,12 +1,12 @@
 {
 	"name": "actor-find-broken-links",
-	"actId": null,
+	"actId": "jancurn/actor-find-broken-links",
 	"version": {
 		"versionNumber": "0.1",
 		"buildTag": "latest",
 		"envVars": [],
 		"sourceType": "TARBALL",
-		"tarballUrl": null
+		"tarballUrl": "https://api.apify.com/v2/key-value-stores/Sfu5XfWE9t5WQMMgZ/records/actor-find-broken-links-0.1.zip?disableRedirect=true"
 	},
 	"template": "puppeteer_crawler"
 }
