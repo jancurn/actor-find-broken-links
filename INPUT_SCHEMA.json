@@ -7,11 +7,13 @@
       "title": "Website URL",
       "type": "string",
       "description": "The URL to crawl. Only URLs pages in the sub-directory will be probed.",
-      "prefill": "https://www.example.com/"
+      "prefill": "https://www.example.com/",
+      "editor": "textfield",
+      "maxLength": 200
     },
     "maxPages": {
       "title": "Max pages",
-      "type": "number",
+      "type": "integer",
       "description": "The maximum number of pages that will be crawled. If empty, the number is not limited.",
       "prefill": 1000
     }
