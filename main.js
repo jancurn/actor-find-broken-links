@@ -31,7 +31,7 @@ Apify.main(async () => {
     const crawler = new Apify.PuppeteerCrawler({
         requestQueue,
         maxRequestsPerCrawl: input.maxPages,
-        maxRequestRetries: 2,
+        maxRequestRetries: 3,
         launchPuppeteerFunction: async () => Apify.launchPuppeteer({
             defaultViewport: {
                 width: 1200,
@@ -50,6 +50,13 @@ Apify.main(async () => {
                 linkUrls: null,
                 anchors: null,
             };
+
+            /* if (response.status() !== 200) {
+                console.log('ALERT');
+                console.dir(request);
+                console.dir(record);
+                console.dir(response);
+            } */
 
             // If we're on the base website, find links to new pages and enqueue them
             if (purlBase.matches(url)) {
@@ -84,7 +91,7 @@ Apify.main(async () => {
         // This function is called if the page processing failed more than maxRequestRetries+1 times.
         handleFailedRequestFunction: async ({ request }) => {
             const url = normalizeUrl(request.url);
-            console.log(`[${url}] failed too many times`);
+            console.log(`Page failed ${request.retryCount + 1} times, giving up: ${url}`);
 
             await Apify.pushData({
                 url,
@@ -105,9 +112,9 @@ Apify.main(async () => {
     await dataset.forEach(async (record) => {
         urlToRecord[record.url] = record;
         record.anchorsDict = {};
-        record.anchors.forEach((anchor) => {
+        _.each(record.anchors, (anchor) => {
             record.anchorsDict[anchor] = true;
-        })
+        });
     });
 
     // Array of normalized URLs to process
@@ -120,11 +127,12 @@ Apify.main(async () => {
 
     while (pendingUrls.length > 0) {
         const url = pendingUrls.shift();
-        console.log(`Processing result: ${url}`);
 
         // Only process each URL once
         if (doneUrls[url]) continue;
         doneUrls[url] = true;
+
+        console.log(`Processing result: ${url}`);
 
         const record = urlToRecord[url];
 
@@ -145,9 +153,10 @@ Apify.main(async () => {
             const link = {
                 url: linkUrl,
                 normalizedUrl: linkNurl,
-                fragment,
                 httpStatus: null,
-                fragmentFound: false,
+                errorMessage: null,
+                fragment,
+                fragmentValid: false,
             };
 
             const record = urlToRecord[linkNurl];
@@ -158,6 +167,7 @@ Apify.main(async () => {
             }
 
             link.httpStatus = record.httpStatus;
+            link.errorMessage = record.errorMessage;
             link.fragmentValid = !fragment || !!record.anchorsDict[fragment];
             result.links.push(link);
 
@@ -168,8 +178,52 @@ Apify.main(async () => {
         }
     }
 
-    // Save final results
-    await Apify.setValue('OUTPUT.json', results)
+    // Save results in JSON format
+    console.log('Saving results...');
+    await Apify.setValue('OUTPUT', results);
 
-    // TODO: Generate HTML report
+    // Generate HTML report
+    let html = `
+<html>
+  <head>
+    <title>Broken link report for ${baseUrl}</title>
+  </head>
+  <body>
+    <table>
+      <tr>
+        <th>From</th>
+        <th>To</th>
+        <th>HTTP&nbsp;status</th>
+        <th>Description</th>
+      </tr>`;
+
+    for (let result of results) {
+        for (let link of result.links) {
+
+        let color = 'lightgreen';
+        let description = 'OK';
+        if (link.errorMessage || !(link.httpStatus >= 200 || link.httpStatus <= 299)) {
+            color = 'lightred';
+            description = link.errorMessage ? `Error: ${link.errorMessage}` : 'Invalid HTTP status';
+        } else if (!link.fragmentValid) {
+            color = 'orange';
+            description = 'URL fragment not found';
+        }
+
+        html += `<tr style="background-color: ${color}">
+            <td>${result.url}</td>
+            <td>${link.url}</td>
+            <td>${link.httpStatus}</td>
+            <td>${description}</td>
+          </tr>`;
+        }
+    }
+
+    html += `
+    </table>
+  </body>
+</html>`;
+
+    await Apify.setValue('OUTPUT.html', html, { contentType: 'text/html' });
+
 });
