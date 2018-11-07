@@ -16,6 +16,11 @@
       "type": "integer",
       "description": "The maximum number of pages that will be crawled. If empty, the number is not limited.",
       "prefill": 1000
+    },
+    "maxConcurrency": {
+      "title": "Max concurrency",
+      "type": "integer",
+      "description": "The maximum number of pages from the target website to crawl in parallel. You can use this number to reduce the load on the target web server."
     }
   },
   "required": ["baseUrl"]

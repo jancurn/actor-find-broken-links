@@ -32,6 +32,7 @@ Apify.main(async () => {
         requestQueue,
         maxRequestsPerCrawl: input.maxPages,
         maxRequestRetries: 3,
+        maxConcurrency: input.maxConcurrency,
         launchPuppeteerFunction: async () => Apify.launchPuppeteer({
             defaultViewport: {
                 width: 1200,
