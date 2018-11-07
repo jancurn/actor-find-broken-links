@@ -158,6 +158,7 @@ Apify.main(async () => {
                 errorMessage: null,
                 fragment,
                 fragmentValid: false,
+                crawled: false,
             };
 
             const record = urlToRecord[linkNurl];
@@ -167,6 +168,7 @@ Apify.main(async () => {
                 continue;
             }
 
+            link.crawled = true;
             link.httpStatus = record.httpStatus;
             link.errorMessage = record.errorMessage;
             link.fragmentValid = !fragment || !!record.anchorsDict[fragment];
@@ -188,6 +190,14 @@ Apify.main(async () => {
 <html>
   <head>
     <title>Broken link report for ${baseUrl}</title>
+    <style>
+        body {
+            font-family : Sans-serif;
+        }
+        th {
+            text-align: left;
+        }
+    </style>
   </head>
   <body>
     <table>
@@ -203,7 +213,10 @@ Apify.main(async () => {
 
         let color = 'lightgreen';
         let description = 'OK';
-        if (link.errorMessage || !(link.httpStatus >= 200 || link.httpStatus <= 299)) {
+        if (!link.crawled) {
+            color = '#F0E68C';
+            description = 'Page not crawled';
+        } else if (link.errorMessage || !link.httpStatus || link.httpStatus < 200 || link.httpStatus >= 300) {
             color = 'lightred';
             description = link.errorMessage ? `Error: ${link.errorMessage}` : 'Invalid HTTP status';
         } else if (!link.fragmentValid) {
@@ -212,9 +225,9 @@ Apify.main(async () => {
         }
 
         html += `<tr style="background-color: ${color}">
-            <td>${result.url}</td>
-            <td>${link.url}</td>
-            <td>${link.httpStatus}</td>
+            <td><a href="${result.url}" target="_blank">${result.url}</a></td>
+            <td><a href="${link.url}" target="_blank">${link.url}</a></td>
+            <td>${link.httpStatus || ''}</td>
             <td>${description}</td>
           </tr>`;
         }
@@ -226,5 +239,7 @@ Apify.main(async () => {
 </html>`;
 
     await Apify.setValue('OUTPUT.html', html, { contentType: 'text/html' });
+
+    console.log('Done.');
 
 });
