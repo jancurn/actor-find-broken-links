@@ -240,6 +240,8 @@ Apify.main(async () => {
 
     await Apify.setValue('OUTPUT.html', html, { contentType: 'text/html' });
 
-    console.log('Done.');
+    console.log('HTML report was stored to:');
+    console.log(`https://api.apify.com/v2/key-value-stores/${process.env.APIFY_DEFAULT_KEY_VALUE_STORE_ID}/records/OUTPUT.html?disableRedirect=1`);
 
+    console.log('\nDone.');
 });
