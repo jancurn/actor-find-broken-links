@@ -217,7 +217,7 @@ Apify.main(async () => {
             color = '#F0E68C';
             description = 'Page not crawled';
         } else if (link.errorMessage || !link.httpStatus || link.httpStatus < 200 || link.httpStatus >= 300) {
-            color = 'lightred';
+            color = 'red';
             description = link.errorMessage ? `Error: ${link.errorMessage}` : 'Invalid HTTP status';
         } else if (!link.fragmentValid) {
             color = 'orange';
