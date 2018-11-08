@@ -20,12 +20,14 @@ On every page, the crawler analyses whether links to other pages are working or 
 For example, if the page contains a link to:
 
 ```
-https://www.example.com/some/other/page#anchor
+https://www.example.com/another/page#anchor
 ```
 
 The actor opens the page
 
-```https://www.example.com/some/other/page```
+```
+https://www.example.com/another/page
+```
 
 and checks whether the page loads
 correctly and then it also checks that it contains the `#anchor`. That means the page contains either
