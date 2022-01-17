@@ -1,12 +1,14 @@
 const Apify = require('apify');
 const _ = require('underscore');
-const { getPageRecord } = require('./handle-page');
+const { getPageRecord } = require('./page-handler');
+const { sendEmailNotification } = require('./notification');
 const {
     normalizeUrl,
     setDefaultViewport,
     processPendingUrls,
     createUrlToRecordLookupTable,
-    saveResults
+    saveResults,
+    getBrokenLinks
 } = require('./tools');
 
 const { utils: { log } } = Apify;
@@ -65,6 +67,12 @@ Apify.main(async () => {
     processPendingUrls(pendingUrls, urlToRecord, doneUrls, results);
 
     await saveResults(results, baseUrl);
+
+    const { notificationEmails } = input;
+    const brokenLinks = getBrokenLinks(results);
+    if (brokenLinks.length && notificationEmails && notificationEmails.length) {
+        await sendEmailNotification(brokenLinks, notificationEmails);
+    }
 
     log.info('\nDone.');
 });

@@ -17,6 +17,13 @@
       "description": "The maximum number of pages that will be crawled. If empty, the number is not limited.",
       "prefill": 1000
     },
+    "notificationEmails": {
+      "title": "Notification emails",
+      "type": "array",
+      "description": "Add email addresses to receive notifications whenever the actor discovers broken links.",
+      "editor": "stringList",
+      "prefill": ["email@example.com"]
+    },
     "maxConcurrency": {
       "title": "Max concurrency",
       "type": "integer",

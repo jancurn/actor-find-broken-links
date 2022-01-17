@@ -154,28 +154,27 @@ const generateHtmlReport = (results, baseUrl) => {
         <th>Description</th>
       </tr>`;
 
-    for (let result of results) {
-        for (let link of result.links) {
+    for (const result of results) {
+        for (const link of result.links) {
+            let color = 'lightgreen';
+            let description = 'OK';
+            if (!link.crawled) {
+                color = '#F0E68C';
+                description = 'Page not crawled';
+            } else if (isLinkBroken(link)) {
+                color = 'red';
+                description = link.errorMessage ? `Error: ${link.errorMessage}` : 'Invalid HTTP status';
+            } else if (!link.fragmentValid) {
+                color = 'orange';
+                description = 'URL fragment not found';
+            }
 
-        let color = 'lightgreen';
-        let description = 'OK';
-        if (!link.crawled) {
-            color = '#F0E68C';
-            description = 'Page not crawled';
-        } else if (link.errorMessage || !link.httpStatus || link.httpStatus < 200 || link.httpStatus >= 300) {
-            color = 'red';
-            description = link.errorMessage ? `Error: ${link.errorMessage}` : 'Invalid HTTP status';
-        } else if (!link.fragmentValid) {
-            color = 'orange';
-            description = 'URL fragment not found';
-        }
-
-        html += `<tr style="background-color: ${color}">
-            <td><a href="${result.url}" target="_blank">${result.url}</a></td>
-            <td><a href="${link.url}" target="_blank">${link.url}</a></td>
-            <td>${link.httpStatus || ''}</td>
-            <td>${description}</td>
-          </tr>`;
+            html += `<tr style="background-color: ${color}">
+                <td><a href="${result.url}" target="_blank">${result.url}</a></td>
+                <td><a href="${link.url}" target="_blank">${link.url}</a></td>
+                <td>${link.httpStatus || ''}</td>
+                <td>${description}</td>
+            </tr>`;
         }
     }
 
@@ -187,6 +186,38 @@ const generateHtmlReport = (results, baseUrl) => {
     return html;
 };
 
+const isLinkBroken = (link) => {
+    const { crawled, errorMessage, httpStatus } = link;
+    const invalidHttpStatus = !httpStatus || httpStatus < 200 || httpStatus >= 300
+    return crawled && (errorMessage || invalidHttpStatus);
+};
+
+/**
+ * Extracts broken links.
+ * @param {any[]} results 
+ * @returns {{
+ *  link: string,
+ *  baseUrl: string,
+ * }[]} broken links
+ */
+const getBrokenLinks = (results) => {
+    const brokenLinks = [];
+
+    results.forEach((result) => {
+        const { url, links } = result;
+        links.forEach((link) => {
+            if (isLinkBroken(link)) {
+                brokenLinks.push({
+                    link: link.url,
+                    baseUrl: url,
+                });
+            }
+        });
+    });
+
+    return brokenLinks;
+};
+
 module.exports = {
     setDefaultViewport,
     normalizeUrl,
@@ -194,4 +225,5 @@ module.exports = {
     createUrlToRecordLookupTable,
     generateHtmlReport,
     saveResults,
+    getBrokenLinks,
 };
