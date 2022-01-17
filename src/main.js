@@ -1,23 +1,13 @@
 const _ = require('underscore');
 const Apify = require('apify');
-const utils = require('apify-shared/utilities');
+const { normalizeUrl, setDefaultViewport } = require('./tools');
 
-// This function normalizes the URL and removes the #fragment
-const normalizeUrl = (url) => {
-    const nurl = utils.normalizeUrl(url);
-    if (nurl) return nurl;
-
-    const index = url.indexOf('#');
-    if (index > 0) return url.substring(0, index);
-
-    return url;
-};
+const { utils: { log, enqueueLinks } } = Apify;
 
 Apify.main(async () => {
     // Fetch input
     const input = await Apify.getValue('INPUT');
-    console.log('Input:');
-    console.dir(input);
+    log.info(`Input: ${JSON.stringify(input, null, 2)}`);
 
     const baseUrl = normalizeUrl(input.baseUrl);
 
@@ -26,22 +16,19 @@ Apify.main(async () => {
 
     const purlBase = new Apify.PseudoUrl(`${baseUrl}[(|/.*)]`);
 
-    console.log(`Starting crawl of ${baseUrl}`);
+    log.info(`Starting crawl of ${baseUrl}`);
 
     const crawler = new Apify.PuppeteerCrawler({
         requestQueue,
         maxRequestsPerCrawl: input.maxPages,
         maxRequestRetries: 3,
         maxConcurrency: input.maxConcurrency,
-        launchPuppeteerFunction: async () => Apify.launchPuppeteer({
-            defaultViewport: {
-                width: 1200,
-                height: 900,
-            },
-        }),
-        handlePageFunction: async ({ request, page, response }) => {
+        browserPoolOptions: {
+            preLaunchHooks: [setDefaultViewport]
+        },
+        handlePageFunction: async ({ request, page, response, crawler: { requestQueue } }) => {
             const url = normalizeUrl(request.url);
-            console.log(`Analysing page: ${url}`);
+            log.info(`Analysing page: ${url}`);
 
             const record = {
                 url,
@@ -53,7 +40,7 @@ Apify.main(async () => {
             };
 
             /* if (response.status() !== 200) {
-                console.log('ALERT');
+                log.info('ALERT');
                 console.dir(request);
                 console.dir(record);
                 console.dir(response);
@@ -62,8 +49,12 @@ Apify.main(async () => {
             // If we're on the base website, find links to new pages and enqueue them
             if (purlBase.matches(url)) {
                 record.isBaseWebsite = true;
-                // console.log(`[${url}] Enqueuing links`);
-                const infos = await Apify.utils.puppeteer.enqueueLinks(page, 'a', requestQueue);
+                // log.info(`[${url}] Enqueuing links`);
+                const infos = await enqueueLinks({
+                    page, 
+                    requestQueue,
+                    selector: 'a',
+                });
                 let links = _.map(infos, (info) => info.request.url).sort();
                 record.linkUrls = _.uniq(links, true);
             }
@@ -92,7 +83,7 @@ Apify.main(async () => {
         // This function is called if the page processing failed more than maxRequestRetries+1 times.
         handleFailedRequestFunction: async ({ request }) => {
             const url = normalizeUrl(request.url);
-            console.log(`Page failed ${request.retryCount + 1} times, giving up: ${url}`);
+            log.info(`Page failed ${request.retryCount + 1} times, giving up: ${url}`);
 
             await Apify.pushData({
                 url,
@@ -104,7 +95,7 @@ Apify.main(async () => {
 
     await crawler.run();
 
-    console.log('Crawling finished, processing results...');
+    log.info('Crawling finished, processing results...');
 
     // Create a look-up table for normalized URL->record,
     // and also create a look-up table in record.anchorsDict for anchor->true
@@ -133,7 +124,7 @@ Apify.main(async () => {
         if (doneUrls[url]) continue;
         doneUrls[url] = true;
 
-        console.log(`Processing result: ${url}`);
+        log.info(`Processing result: ${url}`);
 
         const record = urlToRecord[url];
 
@@ -182,7 +173,7 @@ Apify.main(async () => {
     }
 
     // Save results in JSON format
-    console.log('Saving results...');
+    log.info('Saving results...');
     await Apify.setValue('OUTPUT', results);
 
     // Generate HTML report
@@ -240,8 +231,8 @@ Apify.main(async () => {
 
     await Apify.setValue('OUTPUT.html', html, { contentType: 'text/html' });
 
-    console.log('HTML report was stored to:');
-    console.log(`https://api.apify.com/v2/key-value-stores/${process.env.APIFY_DEFAULT_KEY_VALUE_STORE_ID}/records/OUTPUT.html?disableRedirect=1`);
+    log.info('HTML report was stored to:');
+    log.info(`https://api.apify.com/v2/key-value-stores/${process.env.APIFY_DEFAULT_KEY_VALUE_STORE_ID}/records/OUTPUT.html?disableRedirect=1`);
 
-    console.log('\nDone.');
+    log.info('\nDone.');
 });
