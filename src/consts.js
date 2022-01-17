@@ -7,3 +7,5 @@ exports.EMAIL_NOTIFICATION_ACTOR_ID = 'apify/send-mail';
 
 exports.NAVIGATION_TIMEOUT = 120;
 exports.MAX_REQUEST_RETRIES = 1;
+
+exports.BASE_URL_LABEL = 'BASE_URL';

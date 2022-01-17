@@ -1,6 +1,7 @@
 const Apify = require('apify');
 const { Puppeteer } = require('puppeteer');
 const _ = require('underscore');
+const { BASE_URL_LABEL } = require('./consts');
 const { normalizeUrl } = require('./tools');
 
 const { utils: { log, enqueueLinks } } = Apify;
@@ -8,7 +9,6 @@ const { utils: { log, enqueueLinks } } = Apify;
 /**
  * Analyses the current page and creates the corresponding info record.
  * @param {any} context 
- * @param {Apify.PseudoUrl} purlBase 
  * @returns {Promise<{
  *  url: string,
  *  isBaseWebsite: boolean,
@@ -18,9 +18,10 @@ const { utils: { log, enqueueLinks } } = Apify;
  *  anchors: any[],
  * }>} page record
  */
-const getPageRecord = async ({ request, page, response, crawler: { requestQueue } }, purlBase) => {
+const getPageRecord = async ({ request, page, response, crawler: { requestQueue } }) => {
+    const { userData: { label } } = request;
+
     const url = normalizeUrl(request.url);
-    log.info(`Analysing page: ${url}`);
 
     const record = {
         url,
@@ -39,7 +40,7 @@ const getPageRecord = async ({ request, page, response, crawler: { requestQueue 
     } */
 
     // If we're on the base website, find links to new pages and enqueue them
-    if (purlBase.matches(url)) {
+    if (label === BASE_URL_LABEL) {
         record.isBaseWebsite = true;
         // log.info(`[${url}] Enqueuing links`);
         const infos = await enqueueLinks({

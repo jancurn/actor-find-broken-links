@@ -14,13 +14,20 @@ const { utils: { log } } = Apify;
 const sendEmailNotification = async (brokenLinks, emails) => {
     const joinedEmails = emails.join(', ');
 
+    const text = buildNotificationBody(brokenLinks);
+
     const emailActorInput = {
         to: joinedEmails,
         subject: 'Broken links notification',
-        text: buildNotificationBody(brokenLinks),
+        text,
     };
 
+    log.info('Sending email notification...');
+    log.info(`${text}`);
+
     await Apify.call(EMAIL_NOTIFICATION_ACTOR_ID, emailActorInput);
+
+    log.info('Notification sent');
 };
 
 /**
@@ -45,9 +52,6 @@ const buildNotificationBody = (brokenLinks) => {
             text += `\n${link.url}`;
         });
     })
-
-    log.info('Sending email notification...');
-    log.info(`${text}`);
 
     return text;
 };

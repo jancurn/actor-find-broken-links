@@ -1,7 +1,7 @@
 const Apify = require('apify');
 const _ = require('underscore');
 const utils = require('apify-shared/utilities');
-const { DEFAULT_VIEWPORT } = require("./consts");
+const { DEFAULT_VIEWPORT, BASE_URL_LABEL } = require("./consts");
 
 const { utils: { log } } = Apify;
 
@@ -185,6 +185,31 @@ const saveRecordToDataset = async (record, saveOnlyBrokenLinks) => {
     }
 };
 
+const getBaseUrlRequest = (baseUrl) => {
+    // Unique key needs to be specified explicitly as we've already enqueued linkUrls from their base url.
+    const uniqueKey = `${baseUrl}_newBaseUrl`;
+
+    return {
+        url: baseUrl,
+        userData: { label: BASE_URL_LABEL },
+        uniqueKey,
+    }
+}
+
+/**
+ * Enqueues link urls to enable subdomain crawling.
+ * @param {string[]} linkUrls 
+ * @param {Apify.RequestQueue} requestQueue 
+ */
+const enqueueLinkUrls = async (linkUrls, requestQueue) => {
+    log.info(`Enqueuing ${linkUrls.length} new base urls...`);
+
+    for (const linkUrl of linkUrls) {
+        const baseUrl = normalizeUrl(linkUrl);
+        await requestQueue.addRequest(getBaseUrlRequest(baseUrl));
+    }
+};
+
 /**
  * Generates html report from provided results.
  * @param {any[]} results
@@ -289,4 +314,6 @@ module.exports = {
     saveResults,
     saveRecordToDataset,
     getBrokenLinks,
+    enqueueLinkUrls,
+    getBaseUrlRequest,
 };

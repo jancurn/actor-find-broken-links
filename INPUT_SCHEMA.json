@@ -30,6 +30,12 @@
       "description": "If false, all checked links and all information about them will be saved (not CSV friendly).",
       "default": false
     },
+    "crawlSubdomains": {
+      "title": "Crawl subdomains",
+      "type": "boolean",
+      "description": "If true, actor will crawl all links recursively.",
+      "default": false
+    },
     "maxConcurrency": {
       "title": "Max concurrency",
       "type": "integer",
