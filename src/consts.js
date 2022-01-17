@@ -4,3 +4,5 @@ exports.DEFAULT_VIEWPORT = {
 };
 
 exports.EMAIL_NOTIFICATION_ACTOR_ID = 'apify/send-mail';
+
+exports.NAVIGATION_TIMEOUT = 180;

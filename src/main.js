@@ -10,6 +10,7 @@ const {
     saveResults,
     getBrokenLinks
 } = require('./tools');
+const { NAVIGATION_TIMEOUT } = require('./consts');
 
 const { utils: { log } } = Apify;
 
@@ -32,6 +33,7 @@ Apify.main(async () => {
         browserPoolOptions: {
             preLaunchHooks: [setDefaultViewport]
         },
+        navigationTimeoutSecs: NAVIGATION_TIMEOUT,
         handlePageFunction: async (context) => {
             const record = await getPageRecord(context, purlBase)
 
