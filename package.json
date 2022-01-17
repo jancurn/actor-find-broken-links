@@ -8,6 +8,10 @@
 		"apify-shared": "^0.7.6",
 		"puppeteer": "^10.4.0"
 	},
+	"devDependencies": {
+		"@apify/eslint-config": "^0.2.2",
+		"eslint": "^8.7.0"
+	},
 	"scripts": {
 		"start": "node src/main.js",
 		"test": "echo \"Error: no test specified\" && exit 1"
