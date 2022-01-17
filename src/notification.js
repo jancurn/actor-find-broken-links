@@ -6,7 +6,7 @@ const { utils: { log } } = Apify;
 /**
  *
  * @param {{
- *  link: string,
+ *  link: any,
  *  baseUrl: string,
  * }[]} brokenLinks
  * @param {string[]} emails
@@ -26,7 +26,7 @@ const sendEmailNotification = async (brokenLinks, emails) => {
 /**
  *
  * @param {{
- *  link: string,
+ *  link: any,
  *  baseUrl: string,
  * }[]} brokenLinks 
  * @returns {string} notification text
@@ -42,7 +42,7 @@ const buildNotificationBody = (brokenLinks) => {
         text += `\n\nDetected from ${baseUrl}:\n`;
 
         links.forEach((link) => {
-            text += `\n${link}`;
+            text += `\n${link.url}`;
         });
     })
 

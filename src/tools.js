@@ -25,13 +25,22 @@ const normalizeUrl = (url) => {
 };
 
 /**
- * Updates doneUrls and results according to provided pendingUrls.
- * @param {string[]} pendingUrls
- * @param {any} urlToRecord
- * @param {any} doneUrls
- * @param {any[]} results
+ * Creates collection of results for the provided base url.
+ * @param {string} baseUrl
+ * @param {any[]} records
+ * @returns {Promise<any[]>} built results
  */
-const processPendingUrls = (pendingUrls, urlToRecord, doneUrls, results) => {
+const getResults = async (baseUrl, records) => {
+    const results = [];
+
+    // Dictionary of finished URLs. Key is normalized URL, value true if URL was already processed
+    const doneUrls = {};
+
+    const urlToRecord = await createUrlToRecordLookupTable(records);
+
+    // Array of normalized URLs to process
+    const pendingUrls = [baseUrl];
+
     while (pendingUrls.length > 0) {
         const url = pendingUrls.shift();
 
@@ -46,60 +55,68 @@ const processPendingUrls = (pendingUrls, urlToRecord, doneUrls, results) => {
 
         const result = {
             url,
-            title: record.title,
+            title: record ? record.title : null,
             links: [],
         };
         results.push(result);
 
-        for (let linkUrl of record.linkUrls) {
-            const linkNurl = normalizeUrl(linkUrl);
-
-            // Get fragment from URL
-            const index = linkUrl.indexOf('#');
-            const fragment = index > 0 ? linkUrl.substring(index+1) : '';
-
-            const link = {
-                url: linkUrl,
-                normalizedUrl: linkNurl,
-                httpStatus: null,
-                errorMessage: null,
-                fragment,
-                fragmentValid: false,
-                crawled: false,
-            };
-
-            const record = urlToRecord[linkNurl];
-            if (!record) {
-                // Page was not crawled at all...
+        if (record && record.linkUrls) {
+            for (let linkUrl of record.linkUrls) {
+                const linkNurl = normalizeUrl(linkUrl);
+    
+                const link = createLink(linkUrl, linkNurl, urlToRecord);
                 result.links.push(link);
-                continue;
-            }
-
-            link.crawled = true;
-            link.httpStatus = record.httpStatus;
-            link.errorMessage = record.errorMessage;
-            link.fragmentValid = !fragment || !!record.anchorsDict[fragment];
-            result.links.push(link);
-
-            // If the linked page is from the base website, add it to the processing queue
-            if (record.isBaseWebsite && !doneUrls[linkNurl]) {
-                pendingUrls.push(linkNurl);
+    
+                // If the linked page is from the base website, add it to the processing queue
+                if (record.isBaseWebsite && !doneUrls[linkNurl]) {
+                    pendingUrls.push(linkNurl);
+                }
             }
         }
     }
+
+    return results;
 };
+
+const createLink = (linkUrl, linkNurl, urlToRecord) => {
+    // Get fragment from URL
+    const index = linkUrl.indexOf('#');
+    const fragment = index > 0 ? linkUrl.substring(index+1) : '';
+
+    const link = {
+        url: linkUrl,
+        normalizedUrl: linkNurl,
+        httpStatus: null,
+        errorMessage: null,
+        fragment,
+        fragmentValid: false,
+        crawled: false,
+    };
+
+    const record = urlToRecord[linkNurl];
+    if (record) {
+        // Page was crawled
+        link.crawled = true;
+        link.httpStatus = record.httpStatus;
+        link.errorMessage = record.errorMessage;
+        link.fragmentValid = !fragment || !!record.anchorsDict[fragment];
+    }
+
+    return link;
+}
 
 /**
  * Creates a look-up table for normalized URL->record
  * and also creates a look-up table in record.anchorsDict for anchor->true
+ * @param {any[]} records
  * @returns urlToRecord look-up table
  */
-const createUrlToRecordLookupTable = async () => {
+const createUrlToRecordLookupTable = async (records) => {
     const urlToRecord = {};
-    const dataset = await Apify.openDataset();
 
-    await dataset.forEach(async (record) => {
-        urlToRecord[record.url] = record;
+    records.forEach((record) => {
+        const { url } = record;
+        urlToRecord[url] = record;
         record.anchorsDict = {};
 
         _.each(record.anchors, (anchor) => {
@@ -123,6 +140,49 @@ const saveResults = async (results, baseUrl) => {
 
     log.info(`HTML report was stored to:
     https://api.apify.com/v2/key-value-stores/${process.env.APIFY_DEFAULT_KEY_VALUE_STORE_ID}/records/OUTPUT.html?disableRedirect=1`);
+};
+
+/**
+ * 
+ * @param {{
+ *  url: string,
+ *  isBaseWebsite: boolean,
+ *  httpStatus: any,
+ *  title: any,
+ *  linkUrls: any,
+ *  anchors: any[],
+ * }} record
+ * @returns {{
+ *  url: string,
+ *  isBaseWebsite: boolean,
+ *  httpStatus: any,
+ *  title: any,
+ * }} csv friendly record
+ */
+const getCsvFriendlyRecord = (record) => {
+    const { url, isBaseWebsite, httpStatus, title } = record;
+    return { url, isBaseWebsite, httpStatus, title };
+};
+
+/**
+ *
+ * @param {{
+ *  url: string,
+ *  isBaseWebsite: boolean,
+ *  httpStatus: any,
+ *  title: any,
+ *  linkUrls: any,
+ *  anchors: any[],
+ * }} record,
+ * @param {boolean} saveOnlyBrokenLinks
+ */
+const saveRecordToDataset = async (record, saveOnlyBrokenLinks) => {
+    const filteredRecord = saveOnlyBrokenLinks ? getCsvFriendlyRecord(record) : record;
+    const { httpStatus } = filteredRecord;
+
+    if (!saveOnlyBrokenLinks || (saveOnlyBrokenLinks && isErrorHttpStatus(httpStatus))) {
+        await Apify.pushData(filteredRecord);
+    }
 };
 
 /**
@@ -186,17 +246,20 @@ const generateHtmlReport = (results, baseUrl) => {
     return html;
 };
 
+const isErrorHttpStatus = (httpStatus) => {
+    return !httpStatus || httpStatus < 200 || httpStatus >= 300;
+}
+
 const isLinkBroken = (link) => {
     const { crawled, errorMessage, httpStatus } = link;
-    const invalidHttpStatus = !httpStatus || httpStatus < 200 || httpStatus >= 300
-    return crawled && (errorMessage || invalidHttpStatus);
+    return crawled && (errorMessage || isErrorHttpStatus(httpStatus));
 };
 
 /**
  * Extracts broken links.
  * @param {any[]} results 
  * @returns {{
- *  link: string,
+ *  link: any,
  *  baseUrl: string,
  * }[]} broken links
  */
@@ -208,7 +271,7 @@ const getBrokenLinks = (results) => {
         links.forEach((link) => {
             if (isLinkBroken(link)) {
                 brokenLinks.push({
-                    link: link.url,
+                    link,
                     baseUrl: url,
                 });
             }
@@ -221,9 +284,9 @@ const getBrokenLinks = (results) => {
 module.exports = {
     setDefaultViewport,
     normalizeUrl,
-    processPendingUrls,
-    createUrlToRecordLookupTable,
+    getResults,
     generateHtmlReport,
     saveResults,
+    saveRecordToDataset,
     getBrokenLinks,
 };

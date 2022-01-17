@@ -9,7 +9,14 @@ const { utils: { log, enqueueLinks } } = Apify;
  * Analyses the current page and creates the corresponding info record.
  * @param {any} context 
  * @param {Apify.PseudoUrl} purlBase 
- * @returns 
+ * @returns {Promise<{
+ *  url: string,
+ *  isBaseWebsite: boolean,
+ *  httpStatus: any,
+ *  title: any,
+ *  linkUrls: any,
+ *  anchors: any[],
+ * }>} page record
  */
 const getPageRecord = async ({ request, page, response, crawler: { requestQueue } }, purlBase) => {
     const url = normalizeUrl(request.url);

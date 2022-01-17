@@ -2,20 +2,15 @@ const Apify = require('apify');
 const _ = require('underscore');
 const { getPageRecord } = require('./page-handler');
 const { sendEmailNotification } = require('./notification');
-const {
-    normalizeUrl,
-    setDefaultViewport,
-    processPendingUrls,
-    createUrlToRecordLookupTable,
-    saveResults,
-    getBrokenLinks
-} = require('./tools');
-const { NAVIGATION_TIMEOUT } = require('./consts');
+const { normalizeUrl, setDefaultViewport, getResults, saveResults, getBrokenLinks, saveRecordToDataset } = require('./tools');
+const { NAVIGATION_TIMEOUT, MAX_REQUEST_RETRIES } = require('./consts');
 
 const { utils: { log } } = Apify;
 
 Apify.main(async () => {
     const input = await Apify.getValue('INPUT');
+    const { maxConcurrency, notificationEmails, saveOnlyBrokenLinks } = input;
+
     log.info(`Input: ${JSON.stringify(input, null, 2)}`);
 
     const baseUrl = normalizeUrl(input.baseUrl);
@@ -25,20 +20,22 @@ Apify.main(async () => {
 
     const purlBase = new Apify.PseudoUrl(`${baseUrl}[(|/.*)]`);
 
+    const records = await Apify.getValue('RECORDS') || [];
+    Apify.events.on('persistState', async () => { await Apify.setValue('RECORDS', records); });
+
     const crawler = new Apify.PuppeteerCrawler({
         requestQueue,
+        maxConcurrency,
         maxRequestsPerCrawl: input.maxPages,
-        maxRequestRetries: 3,
-        maxConcurrency: input.maxConcurrency,
+        maxRequestRetries: MAX_REQUEST_RETRIES,
         browserPoolOptions: {
             preLaunchHooks: [setDefaultViewport]
         },
         navigationTimeoutSecs: NAVIGATION_TIMEOUT,
         handlePageFunction: async (context) => {
-            const record = await getPageRecord(context, purlBase)
-
-            // Save result
-            await Apify.pushData(record);
+            const record = await getPageRecord(context, purlBase);
+            await saveRecordToDataset(record, saveOnlyBrokenLinks);
+            records.push(record);
         },
 
         // This function is called if the page processing failed more than maxRequestRetries+1 times.
@@ -46,11 +43,14 @@ Apify.main(async () => {
             const url = normalizeUrl(request.url);
             log.info(`Page failed ${request.retryCount + 1} times, giving up: ${url}`);
 
-            await Apify.pushData({
+            const record = {
                 url,
                 httpStatus: null,
-                errorMessage: _.last(request.errorMessages) || 'Unkown error',
-            });
+                errorMessage: _.last(request.errorMessages) || 'Unknown error',
+            };
+
+            await Apify.pushData(record);
+            records.push(record);
         },
     });
 
@@ -58,19 +58,9 @@ Apify.main(async () => {
     await crawler.run();
     log.info('Crawling finished, processing results...');
     
-    // Dictionary of finished URLs. Key is normalized URL, value true if URL was already processed
-    const doneUrls = {};
-
-    const results = [];
-    const urlToRecord = await createUrlToRecordLookupTable();
-
-    // Array of normalized URLs to process
-    const pendingUrls = [baseUrl];
-    processPendingUrls(pendingUrls, urlToRecord, doneUrls, results);
-
+    const results = await getResults(baseUrl, records);
     await saveResults(results, baseUrl);
 
-    const { notificationEmails } = input;
     const brokenLinks = getBrokenLinks(results);
     if (brokenLinks.length && notificationEmails && notificationEmails.length) {
         await sendEmailNotification(brokenLinks, notificationEmails);

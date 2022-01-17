@@ -24,6 +24,12 @@
       "editor": "stringList",
       "prefill": ["email@example.com"]
     },
+    "saveOnlyBrokenLinks": {
+      "title": "Save only broken links",
+      "type": "boolean",
+      "description": "If false, all checked links and all information about them will be saved (not CSV friendly).",
+      "default": false
+    },
     "maxConcurrency": {
       "title": "Max concurrency",
       "type": "integer",
