@@ -1,7 +1,7 @@
 const Apify = require('apify');
 const _ = require('underscore');
 const utils = require('apify-shared/utilities');
-const { DEFAULT_VIEWPORT, BASE_URL_LABEL } = require("./consts");
+const { DEFAULT_VIEWPORT, BASE_URL_LABEL, OUTPUT_COLORS, STATUS_CODES } = require("./consts");
 
 const { utils: { log } } = Apify;
 
@@ -210,14 +210,8 @@ const enqueueLinkUrls = async (linkUrls, requestQueue) => {
     }
 };
 
-/**
- * Generates html report from provided results.
- * @param {any[]} results
- * @param {string} baseUrl
- * @returns {string} Built html
- */
-const generateHtmlReport = (results, baseUrl) => {
-    let html = `
+const generateHtmlHeader = (baseUrl) => {
+    return `
 <html>
   <head>
     <title>Broken link report for ${baseUrl}</title>
@@ -238,41 +232,62 @@ const generateHtmlReport = (results, baseUrl) => {
         <th>HTTP&nbsp;status</th>
         <th>Description</th>
       </tr>`;
+}
 
-    for (const result of results) {
-        for (const link of result.links) {
-            let color = 'lightgreen';
-            let description = 'OK';
-            if (!link.crawled) {
-                color = '#F0E68C';
-                description = 'Page not crawled';
-            } else if (isLinkBroken(link)) {
-                color = 'red';
-                description = link.errorMessage ? `Error: ${link.errorMessage}` : 'Invalid HTTP status';
-            } else if (!link.fragmentValid) {
-                color = 'orange';
-                description = 'URL fragment not found';
-            }
-
-            html += `<tr style="background-color: ${color}">
-                <td><a href="${result.url}" target="_blank">${result.url}</a></td>
-                <td><a href="${link.url}" target="_blank">${link.url}</a></td>
-                <td>${link.httpStatus || ''}</td>
-                <td>${description}</td>
-            </tr>`;
-        }
-    }
-
-    html += `
+const generateHtmlFooter = () => {
+    return `
     </table>
   </body>
 </html>`;
+}
+
+/**
+ * Generates html report from provided results.
+ * @param {any[]} results
+ * @param {string} baseUrl
+ * @returns {string} Built html
+ */
+const generateHtmlReport = (results, baseUrl, brokenLinksOnly = false) => {
+    let html = generateHtmlHeader(baseUrl);
+
+    for (const result of results) {
+        for (const link of result.links) {
+            const { DEFAULT_LINK, BROKEN_LINK, INVALID_FRAGMENT, UNCRAWLED_LINK } = OUTPUT_COLORS;
+
+            const isBrokenLink = isLinkBroken(link);
+            if (!brokenLinksOnly || (brokenLinksOnly && isBrokenLink)) {
+                let color = DEFAULT_LINK;
+                let description = 'OK';
+                if (!link.crawled) {
+                    color = UNCRAWLED_LINK;
+                    description = 'Page not crawled';
+                } else if (isBrokenLink) {
+                    color = BROKEN_LINK;
+                    description = link.errorMessage ? `Error: ${link.errorMessage}` : 'Invalid HTTP status';
+                } else if (!link.fragmentValid) {
+                    color = INVALID_FRAGMENT;
+                    description = 'URL fragment not found';
+                }
+
+                html += `<tr style="background-color: ${color}">
+                    <td><a href="${result.url}" target="_blank">${result.url}</a></td>
+                    <td><a href="${link.url}" target="_blank">${link.url}</a></td>
+                    <td>${link.httpStatus || ''}</td>
+                    <td>${description}</td>
+                </tr>`;
+            }
+        }
+    }
+
+    html += generateHtmlFooter();
 
     return html;
 };
 
 const isErrorHttpStatus = (httpStatus) => {
-    return !httpStatus || httpStatus < 200 || httpStatus >= 300;
+    const { OK, REDIRECTION, NOT_MODIFIED } = STATUS_CODES;
+    const isRedirection = httpStatus >= REDIRECTION && httpStatus !== NOT_MODIFIED;
+    return !httpStatus || httpStatus < OK || isRedirection;
 }
 
 const isLinkBroken = (link) => {

@@ -70,7 +70,7 @@ Apify.main(async () => {
 
     const brokenLinks = getBrokenLinks(results);
     if (brokenLinks.length && notificationEmails && notificationEmails.length) {
-        await sendEmailNotification(brokenLinks, notificationEmails);
+        await sendEmailNotification(results, baseUrl, notificationEmails);
     }
 
     log.info('\nDone.');

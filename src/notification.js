@@ -1,75 +1,31 @@
 const Apify = require('apify');
 const { EMAIL_NOTIFICATION_ACTOR_ID } = require('./consts');
+const { generateHtmlReport } = require('./tools');
 
 const { utils: { log } } = Apify;
 
 /**
  *
- * @param {{
- *  link: any,
- *  baseUrl: string,
- * }[]} brokenLinks
+ * @param {any[]} results
+ * @param {string} baseUrl
  * @param {string[]} emails
  */
-const sendEmailNotification = async (brokenLinks, emails) => {
+const sendEmailNotification = async (results, baseUrl, emails) => {
     const joinedEmails = emails.join(', ');
 
-    const text = buildNotificationBody(brokenLinks);
+    const BROKEN_LINKS_ONLY = true;
+    const html = generateHtmlReport(results, baseUrl, BROKEN_LINKS_ONLY);
 
     const emailActorInput = {
         to: joinedEmails,
         subject: 'Broken links notification',
-        text,
+        html,
     };
 
     log.info('Sending email notification...');
-    log.info(`${text}`);
-
     await Apify.call(EMAIL_NOTIFICATION_ACTOR_ID, emailActorInput);
-
     log.info('Notification sent');
 };
-
-/**
- *
- * @param {{
- *  link: any,
- *  baseUrl: string,
- * }[]} brokenLinks 
- * @returns {string} notification text
- */
-const buildNotificationBody = (brokenLinks) => {
-    let text = 'Broken links';
-
-    const baseUrls = getBaseUrlsWithLinks(brokenLinks);
-
-    Object.keys(baseUrls).forEach((baseUrl) => {
-        const links = baseUrls[baseUrl];
-
-        text += `\n\nDetected from ${baseUrl}:\n`;
-
-        links.forEach((link) => {
-            text += `\n${link.url}`;
-        });
-    })
-
-    return text;
-};
-
-const getBaseUrlsWithLinks = (brokenLinks) => {
-    const baseUrls = {};
-
-    brokenLinks.forEach((brokenLink) => {
-        const { link, baseUrl } = brokenLink;
-        if (!baseUrls[baseUrl]) {
-            baseUrls[baseUrl] = [];
-        }
-
-        baseUrls[baseUrl].push(link);
-    });
-
-    return baseUrls;
-}
 
 module.exports = {
     sendEmailNotification,
