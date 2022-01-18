@@ -39,20 +39,23 @@ const getPageRecord = async ({ request, page, response, crawler: { requestQueue 
         console.dir(response);
     } */
 
-    // If we're on the base website, find links to new pages and enqueue them
     if (label === BASE_URL_LABEL) {
         record.isBaseWebsite = true;
-        // log.info(`[${url}] Enqueuing links`);
-        const infos = await enqueueLinks({
-            page, 
-            requestQueue,
-            selector: 'a',
-        });
-        let links = _.map(infos, (info) => info.request.url).sort();
-        record.linkUrls = _.uniq(links, true);
     }
 
     return record;
+};
+
+const getAndEnqueueLinkUrls = async ({ page, crawler: { requestQueue } }) => {
+    const infos = await enqueueLinks({
+        page, 
+        requestQueue,
+        selector: 'a',
+    });
+    let links = _.map(infos, (info) => info.request.url).sort();
+    const linkUrls = _.uniq(links, true);
+
+    return linkUrls;
 };
 
 /**
@@ -83,4 +86,5 @@ const getAnchors = async (page) => {
 
 module.exports = {
     getPageRecord,
+    getAndEnqueueLinkUrls,
 }

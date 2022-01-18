@@ -1,7 +1,7 @@
 const Apify = require('apify');
 const _ = require('underscore');
 const utils = require('apify-shared/utilities');
-const { DEFAULT_VIEWPORT, BASE_URL_LABEL, OUTPUT_COLORS, STATUS_CODES } = require("./consts");
+const { DEFAULT_VIEWPORT, BASE_URL_LABEL, OUTPUT_COLORS, STATUS_CODES, URL_PREFIX_REGEX } = require("./consts");
 
 const { utils: { log } } = Apify;
 
@@ -186,28 +186,17 @@ const saveRecordToDataset = async (record, saveOnlyBrokenLinks) => {
 };
 
 const getBaseUrlRequest = (baseUrl) => {
-    // Unique key needs to be specified explicitly as we've already enqueued linkUrls from their base url.
-    const uniqueKey = `${baseUrl}_newBaseUrl`;
-
     return {
         url: baseUrl,
         userData: { label: BASE_URL_LABEL },
-        uniqueKey,
     }
-}
+};
 
-/**
- * Enqueues link urls to enable subdomain crawling.
- * @param {string[]} linkUrls 
- * @param {Apify.RequestQueue} requestQueue 
- */
-const enqueueLinkUrls = async (linkUrls, requestQueue) => {
-    log.info(`Enqueuing ${linkUrls.length} new base urls...`);
+const urlsOfSameDomain = (firstUrl, secondUrl) => {
+    const firstUrlStart = firstUrl.replace(URL_PREFIX_REGEX, '');
+    const secondUrlStart = secondUrl.replace(URL_PREFIX_REGEX, '');
 
-    for (const linkUrl of linkUrls) {
-        const baseUrl = normalizeUrl(linkUrl);
-        await requestQueue.addRequest(getBaseUrlRequest(baseUrl));
-    }
+    return firstUrlStart.startsWith(secondUrlStart) || secondUrlStart.startsWith(firstUrlStart);
 };
 
 const generateHtmlHeader = (baseUrl) => {
@@ -329,6 +318,6 @@ module.exports = {
     saveResults,
     saveRecordToDataset,
     getBrokenLinks,
-    enqueueLinkUrls,
     getBaseUrlRequest,
+    urlsOfSameDomain,
 };

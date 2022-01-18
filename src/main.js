@@ -1,9 +1,9 @@
 const Apify = require('apify');
 const _ = require('underscore');
-const { getPageRecord } = require('./page-handler');
+const { getPageRecord, getAndEnqueueLinkUrls } = require('./page-handler');
 const { sendEmailNotification } = require('./notification');
-const { normalizeUrl, setDefaultViewport, getResults, saveResults, getBrokenLinks, saveRecordToDataset, enqueueLinkUrls, getBaseUrlRequest } = require('./tools');
-const { NAVIGATION_TIMEOUT, MAX_REQUEST_RETRIES, BASE_URL_LABEL } = require('./consts');
+const { normalizeUrl, setDefaultViewport, getResults, saveResults, getBrokenLinks, saveRecordToDataset, getBaseUrlRequest, urlsOfSameDomain } = require('./tools');
+const { NAVIGATION_TIMEOUT, MAX_REQUEST_RETRIES } = require('./consts');
 
 const { utils: { log } } = Apify;
 
@@ -21,28 +21,32 @@ Apify.main(async () => {
     const records = await Apify.getValue('RECORDS') || [];
     Apify.events.on('persistState', async () => { await Apify.setValue('RECORDS', records); });
 
+    const { WITH_SUBDOMAINS, WITHOUT_SUBDOMAINS } = MAX_REQUEST_RETRIES;
+    const maxRequestRetries = crawlSubdomains ? WITH_SUBDOMAINS : WITHOUT_SUBDOMAINS;
+
     const crawler = new Apify.PuppeteerCrawler({
         requestQueue,
         maxConcurrency,
         maxRequestsPerCrawl: maxPages,
-        maxRequestRetries: MAX_REQUEST_RETRIES,
+        maxRequestRetries,
         browserPoolOptions: {
             preLaunchHooks: [setDefaultViewport]
         },
         navigationTimeoutSecs: NAVIGATION_TIMEOUT,
         handlePageFunction: async (context) => {
-            const { request: { url }, crawler: { requestQueue } } = context;
+            const { request: { url } } = context;
             log.info(`Crawling page...`, { url });
 
-            const record = await getPageRecord(context);
+            const record = await getPageRecord(context, crawlSubdomains);
+
+            // If we're on the base website or we're allowed to crawl current subdomain, find links to new pages and enqueue them.
+            const crawlCurrentSubdomain = crawlSubdomains && urlsOfSameDomain(baseUrl, url);
+            if (record.isBaseWebsite || crawlCurrentSubdomain) {
+                record.linkUrls = await getAndEnqueueLinkUrls(context);
+            }
 
             await saveRecordToDataset(record, saveOnlyBrokenLinks);
             records.push(record);
-
-            const { linkUrls } = record;
-            if (crawlSubdomains && linkUrls && linkUrls.length) {
-                await enqueueLinkUrls(linkUrls, requestQueue);
-            }
         },
 
         // This function is called if the page processing failed more than maxRequestRetries+1 times.
