@@ -1,13 +1,10 @@
 const Apify = require('apify');
 const _ = require('underscore');
 const utils = require('apify-shared/utilities');
-const { DEFAULT_VIEWPORT, BASE_URL_LABEL, OUTPUT_COLORS, STATUS_CODES, URL_PREFIX_REGEX } = require("./consts");
+
+const { BASE_URL_LABEL, OUTPUT_COLORS, STATUS_CODES, URL_PREFIX_REGEX } = require("./consts");
 
 const { utils: { log } } = Apify;
-
-const setDefaultViewport = (_pageId, launchContext) => {
-    launchContext.launchOptions.defaultViewport = DEFAULT_VIEWPORT;
-};
 
 /**
  * This function normalizes the URL and removes the #fragment.
@@ -192,11 +189,11 @@ const getBaseUrlRequest = (baseUrl) => {
     }
 };
 
-const urlsOfSameDomain = (firstUrl, secondUrl) => {
-    const firstUrlStart = firstUrl.replace(URL_PREFIX_REGEX, '');
-    const secondUrlStart = secondUrl.replace(URL_PREFIX_REGEX, '');
+const hasBaseDomain = (baseUrl, url) => {
+    const baseUrlStart = baseUrl.replace(URL_PREFIX_REGEX, '');
+    const urlStart = url.replace(URL_PREFIX_REGEX, '');
 
-    return firstUrlStart.startsWith(secondUrlStart) || secondUrlStart.startsWith(firstUrlStart);
+    return urlStart.startsWith(baseUrlStart);
 };
 
 const generateHtmlHeader = (baseUrl) => {
@@ -311,7 +308,6 @@ const getBrokenLinks = (results) => {
 };
 
 module.exports = {
-    setDefaultViewport,
     normalizeUrl,
     getResults,
     generateHtmlReport,
@@ -319,5 +315,5 @@ module.exports = {
     saveRecordToDataset,
     getBrokenLinks,
     getBaseUrlRequest,
-    urlsOfSameDomain,
+    hasBaseDomain,
 };

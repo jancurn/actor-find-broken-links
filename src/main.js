@@ -2,7 +2,7 @@ const Apify = require('apify');
 const _ = require('underscore');
 const { getPageRecord, getAndEnqueueLinkUrls } = require('./page-handler');
 const { sendEmailNotification } = require('./notification');
-const { normalizeUrl, setDefaultViewport, getResults, saveResults, getBrokenLinks, saveRecordToDataset, getBaseUrlRequest, urlsOfSameDomain } = require('./tools');
+const { normalizeUrl, getResults, saveResults, getBrokenLinks, saveRecordToDataset, getBaseUrlRequest, hasBaseDomain } = require('./tools');
 const { NAVIGATION_TIMEOUT, MAX_REQUEST_RETRIES } = require('./consts');
 
 const { utils: { log } } = Apify;
@@ -10,8 +10,6 @@ const { utils: { log } } = Apify;
 Apify.main(async () => {
     const input = await Apify.getValue('INPUT');
     const { maxConcurrency, maxPages, notificationEmails, saveOnlyBrokenLinks, crawlSubdomains } = input;
-
-    log.info(`Input: ${JSON.stringify(input, null, 2)}`);
 
     const baseUrl = normalizeUrl(input.baseUrl);
 
@@ -30,7 +28,9 @@ Apify.main(async () => {
         maxRequestsPerCrawl: maxPages,
         maxRequestRetries,
         browserPoolOptions: {
-            preLaunchHooks: [setDefaultViewport]
+            preLaunchHooks: [(_pageId, launchContext) => {
+                launchContext.launchOptions.defaultViewport = DEFAULT_VIEWPORT;
+            }]
         },
         navigationTimeoutSecs: NAVIGATION_TIMEOUT,
         handlePageFunction: async (context) => {
@@ -40,7 +40,7 @@ Apify.main(async () => {
             const record = await getPageRecord(context, crawlSubdomains);
 
             // If we're on the base website or we're allowed to crawl current subdomain, find links to new pages and enqueue them.
-            const crawlCurrentSubdomain = crawlSubdomains && urlsOfSameDomain(baseUrl, url);
+            const crawlCurrentSubdomain = crawlSubdomains && hasBaseDomain(baseUrl, url);
             if (record.isBaseWebsite || crawlCurrentSubdomain) {
                 record.linkUrls = await getAndEnqueueLinkUrls(context);
             }
@@ -52,7 +52,7 @@ Apify.main(async () => {
         // This function is called if the page processing failed more than maxRequestRetries+1 times.
         handleFailedRequestFunction: async ({ request }) => {
             const url = normalizeUrl(request.url);
-            log.info(`Page failed ${request.retryCount + 1} times, giving up: ${url}`);
+            log.warning(`Page failed ${request.retryCount + 1} times, giving up: ${url}`);
 
             const record = {
                 url,
@@ -60,6 +60,11 @@ Apify.main(async () => {
                 errorMessage: _.last(request.errorMessages) || 'Unknown error',
             };
 
+            /**
+             * Store record with failed request's errorMessage into the result as well.
+             * There's a good chance it failed because the url is broken and the timeout
+             * has exceeded while requesting this url. 
+             */
             await Apify.pushData(record);
             records.push(record);
         },
