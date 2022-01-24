@@ -3,7 +3,7 @@ const _ = require('underscore');
 const { getPageRecord, getAndEnqueueLinkUrls } = require('./page-handler');
 const { sendEmailNotification } = require('./notification');
 const { normalizeUrl, getResults, saveResults, getBrokenLinks, saveRecordToDataset, getBaseUrlRequest, hasBaseDomain } = require('./tools');
-const { NAVIGATION_TIMEOUT, MAX_REQUEST_RETRIES } = require('./consts');
+const { DEFAULT_VIEWPORT, NAVIGATION_TIMEOUT, MAX_REQUEST_RETRIES } = require('./consts');
 
 const { utils: { log } } = Apify;
 
