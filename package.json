@@ -4,14 +4,16 @@
 	"description": "Crawl a number of web pages using headless Chrome and Puppeteer",
 	"main": "main.js",
 	"dependencies": {
-		"apify": "^0.8.19",
-		"apify-shared": "^0.1.6",
-		"puppeteer": "^1.9.0",
-		"underscore": "^1.9.1"
+		"apify": "^2.2.1",
+		"apify-shared": "^0.7.6",
+		"puppeteer": "^10.4.0"
 	},
-	"devDependencies": {},
+	"devDependencies": {
+		"@apify/eslint-config": "^0.2.2",
+		"eslint": "^8.7.0"
+	},
 	"scripts": {
-		"start": "node main.js",
+		"start": "node src/main.js",
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
 	"repository": {

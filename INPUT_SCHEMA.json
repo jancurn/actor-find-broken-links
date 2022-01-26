@@ -17,6 +17,25 @@
       "description": "The maximum number of pages that will be crawled. If empty, the number is not limited.",
       "prefill": 1000
     },
+    "notificationEmails": {
+      "title": "Notification emails",
+      "type": "array",
+      "description": "Add email addresses to receive notifications whenever the actor discovers broken links.",
+      "editor": "stringList",
+      "prefill": ["email@example.com"]
+    },
+    "saveOnlyBrokenLinks": {
+      "title": "Save only broken links",
+      "type": "boolean",
+      "description": "If false, all checked links and all information about them will be saved (not CSV friendly).",
+      "default": false
+    },
+    "crawlSubdomains": {
+      "title": "Crawl subdomains",
+      "type": "boolean",
+      "description": "If true, actor will crawl all links recursively.",
+      "default": false
+    },
     "maxConcurrency": {
       "title": "Max concurrency",
       "type": "integer",
