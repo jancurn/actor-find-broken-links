@@ -146,6 +146,7 @@ const saveResults = async (results, baseUrl) => {
  *  isBaseWebsite: boolean,
  *  httpStatus: any,
  *  title: any,
+ *  referrer: string
  *  linkUrls: any,
  *  anchors: any[],
  * }} record
@@ -154,11 +155,12 @@ const saveResults = async (results, baseUrl) => {
  *  isBaseWebsite: boolean,
  *  httpStatus: any,
  *  title: any,
+ *  referrer: string
  * }} csv friendly record
  */
 const getCsvFriendlyRecord = (record) => {
-    const { url, isBaseWebsite, httpStatus, title } = record;
-    return { url, isBaseWebsite, httpStatus, title };
+    const { url, isBaseWebsite, httpStatus, title, referrer } = record;
+    return { url, isBaseWebsite, httpStatus, title, referrer };
 };
 
 /**

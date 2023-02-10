@@ -18,8 +18,8 @@ const { utils: { log, enqueueLinks } } = Apify;
  *  anchors: any[],
  * }>} page record
  */
-const getPageRecord = async ({ request, page, response, crawler: { requestQueue } }) => {
-    const { userData: { label } } = request;
+const getPageRecord = async ({ request, page, response }) => {
+    const { userData: { label, referrer } } = request;
 
     const url = normalizeUrl(request.url);
 
@@ -30,6 +30,7 @@ const getPageRecord = async ({ request, page, response, crawler: { requestQueue 
         title: await page.title(),
         linkUrls: null,
         anchors: await getAnchors(page),
+        referrer,
     };
 
     /* if (response.status() !== 200) {
@@ -46,11 +47,15 @@ const getPageRecord = async ({ request, page, response, crawler: { requestQueue 
     return record;
 };
 
-const getAndEnqueueLinkUrls = async ({ page, crawler: { requestQueue } }) => {
+const getAndEnqueueLinkUrls = async ({ page, crawler: { requestQueue }, request }) => {
     const infos = await enqueueLinks({
         page, 
         requestQueue,
         selector: 'a',
+        transformRequestFunction: (req) => {
+            req.userData.referrer = request.url;
+            return req;
+        }
     });
     let links = _.map(infos, (info) => info.request.url).sort();
     const linkUrls = _.uniq(links, true);
