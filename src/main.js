@@ -27,6 +27,7 @@ Apify.main(async () => {
         maxConcurrency,
         maxRequestsPerCrawl: maxPages,
         maxRequestRetries,
+        handlePageTimeoutSecs: 180,
         browserPoolOptions: {
             preLaunchHooks: [(_pageId, launchContext) => {
                 launchContext.launchOptions.defaultViewport = DEFAULT_VIEWPORT;
@@ -58,6 +59,7 @@ Apify.main(async () => {
                 url,
                 httpStatus: null,
                 errorMessage: _.last(request.errorMessages) || 'Unknown error',
+                referrer: request.userData.referrer,
             };
 
             /**
