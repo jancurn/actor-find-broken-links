@@ -18,8 +18,8 @@ exports.NAVIGATION_TIMEOUT = 120;
  * retry the request at all when we reach maxPages limit.
  */
 exports.MAX_REQUEST_RETRIES = {
-    WITH_SUBDOMAINS: 0,
-    WITHOUT_SUBDOMAINS: 2,
+    WITH_SUBDOMAINS: 3,
+    WITHOUT_SUBDOMAINS: 3,
 }
 
 exports.BASE_URL_LABEL = 'BASE_URL';

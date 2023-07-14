@@ -9,7 +9,7 @@ const { utils: { log } } = Apify;
 
 Apify.main(async () => {
     const input = await Apify.getValue('INPUT');
-    const { maxConcurrency, maxPages, notificationEmails, saveOnlyBrokenLinks, crawlSubdomains } = input;
+    const { maxConcurrency, maxPages, notificationEmails, saveOnlyBrokenLinks, crawlSubdomains, proxyConfiguration } = input;
 
     const baseUrl = normalizeUrl(input.baseUrl);
 
@@ -23,6 +23,7 @@ Apify.main(async () => {
     const maxRequestRetries = crawlSubdomains ? WITH_SUBDOMAINS : WITHOUT_SUBDOMAINS;
 
     const crawler = new Apify.PuppeteerCrawler({
+        proxyConfiguration: await Apify.createProxyConfiguration(proxyConfiguration),
         requestQueue,
         maxConcurrency,
         maxRequestsPerCrawl: maxPages,
@@ -35,8 +36,23 @@ Apify.main(async () => {
         },
         navigationTimeoutSecs: NAVIGATION_TIMEOUT,
         handlePageFunction: async (context) => {
-            const { request: { url } } = context;
+            let { request: { url, loadedUrl } } = context;
             log.info(`Crawling page...`, { url });
+
+            await context.page.waitForTimeout(10000);
+
+            // Make sure both urls don't end with slash.
+            if (url.endsWith("/")) {
+                url = url.slice(0, -1);
+            }
+            if (loadedUrl.endsWith("/")) {
+                loadedUrl = loadedUrl.slice(0, -1);
+            }
+            
+            // if the user enters with `http` and the page redirects to `https`
+            if (url.replace('http://', 'https://') !== loadedUrl.replace('http://', 'https://')) {
+                await context.page.waitForNavigation({ waitUntil: 'domcontentloaded' });
+            }
 
             const record = await getPageRecord(context, crawlSubdomains);
 

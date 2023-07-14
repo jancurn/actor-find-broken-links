@@ -26,8 +26,8 @@ const getPageRecord = async ({ request, page, response }) => {
     const record = {
         url,
         isBaseWebsite: false,
-        httpStatus: response.status(),
-        title: await page.title(),
+        httpStatus: response?.status(),
+        title: await page?.title(),
         linkUrls: null,
         anchors: await getAnchors(page),
         referrer,
