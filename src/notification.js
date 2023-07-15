@@ -1,8 +1,7 @@
-const Apify = require('apify');
-const { EMAIL_NOTIFICATION_ACTOR_ID } = require('./consts');
-const { generateHtmlReport } = require('./tools');
+import { Actor, log } from 'apify';
 
-const { utils: { log } } = Apify;
+import { EMAIL_NOTIFICATION_ACTOR_ID } from './consts.js';
+import { generateHtmlReport } from './tools.js';
 
 /**
  *
@@ -10,7 +9,7 @@ const { utils: { log } } = Apify;
  * @param {string} baseUrl
  * @param {string[]} emails
  */
-const sendEmailNotification = async (results, baseUrl, emails) => {
+export const sendEmailNotification = async (results, baseUrl, emails) => {
     const joinedEmails = emails.join(', ');
 
     const BROKEN_LINKS_ONLY = true;
@@ -23,10 +22,6 @@ const sendEmailNotification = async (results, baseUrl, emails) => {
     };
 
     log.info('Sending email notification...');
-    await Apify.call(EMAIL_NOTIFICATION_ACTOR_ID, emailActorInput);
+    await Actor.call(EMAIL_NOTIFICATION_ACTOR_ID, emailActorInput);
     log.info('Notification sent');
-};
-
-module.exports = {
-    sendEmailNotification,
 };

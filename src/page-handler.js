@@ -1,10 +1,8 @@
-const Apify = require('apify');
-const { Puppeteer } = require('puppeteer');
-const _ = require('underscore');
-const { BASE_URL_LABEL } = require('./consts');
-const { normalizeUrl } = require('./tools');
+import { Puppeteer } from 'puppeteer';
+import _ from 'underscore';
 
-const { utils: { log, enqueueLinks } } = Apify;
+import { BASE_URL_LABEL } from './consts.js';
+import { normalizeUrl } from './tools.js';
 
 /**
  * Analyses the current page and creates the corresponding info record.
@@ -18,7 +16,7 @@ const { utils: { log, enqueueLinks } } = Apify;
  *  anchors: any[],
  * }>} page record
  */
-const getPageRecord = async ({ request, page, response }) => {
+export const getPageRecord = async ({ request, page, response }) => {
     const { userData: { label, referrer } } = request;
 
     const url = normalizeUrl(request.url);
@@ -47,20 +45,17 @@ const getPageRecord = async ({ request, page, response }) => {
     return record;
 };
 
-const getAndEnqueueLinkUrls = async ({ page, crawler: { requestQueue }, request }) => {
-    const infos = await enqueueLinks({
-        page, 
-        requestQueue,
+export const getAndEnqueueLinkUrls = async ({ crawler: { requestQueue }, request, enqueueLinks }) => {
+    const requests = (await enqueueLinks({
+        strategy: 'all',
         selector: 'a',
         transformRequestFunction: (req) => {
             req.userData.referrer = request.url;
             return req;
         }
-    });
-    let links = _.map(infos, (info) => info.request.url).sort();
-    const linkUrls = _.uniq(links, true);
+    })).processedRequests;
 
-    return linkUrls;
+    return requests.map((req) => req.uniqueKey);
 };
 
 /**
@@ -88,8 +83,3 @@ const getAnchors = async (page) => {
 
     return uniqueAnchors;
 };
-
-module.exports = {
-    getPageRecord,
-    getAndEnqueueLinkUrls,
-}

@@ -4,9 +4,10 @@
 	"description": "Crawl a number of web pages using headless Chrome and Puppeteer",
 	"main": "main.js",
 	"dependencies": {
-		"apify": "^2.2.1",
+		"apify": "^3.1.7",
 		"apify-shared": "^0.7.6",
-		"puppeteer": "^10.4.0"
+		"crawlee": "^3.4.1",
+		"puppeteer": "*"
 	},
 	"devDependencies": {
 		"@apify/eslint-config": "^0.2.2",
@@ -22,5 +23,6 @@
 	},
 	"author": "",
 	"license": "ISC",
-	"homepage": ""
+	"homepage": "",
+	"type": "module"
 }
