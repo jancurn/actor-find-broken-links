@@ -1,10 +1,9 @@
-const Apify = require('apify');
-const _ = require('underscore');
-const utils = require('apify-shared/utilities');
+import { Actor, log } from 'apify';
+import _ from 'underscore';
 
-const { BASE_URL_LABEL, OUTPUT_COLORS, STATUS_CODES, URL_PREFIX_REGEX } = require("./consts");
+import utils from './apify-utils.js';
 
-const { utils: { log } } = Apify;
+import { BASE_URL_LABEL, OUTPUT_COLORS, STATUS_CODES, URL_PREFIX_REGEX } from './consts.js';
 
 /**
  * This function normalizes the URL and removes the #fragment.
@@ -60,10 +59,10 @@ const getResults = async (baseUrl, records) => {
         if (record && record.linkUrls) {
             for (let linkUrl of record.linkUrls) {
                 const linkNurl = normalizeUrl(linkUrl);
-    
+
                 const link = createLink(linkUrl, linkNurl, urlToRecord);
                 result.links.push(link);
-    
+
                 // If the linked page is from the base website, add it to the processing queue
                 if (record.isBaseWebsite && !doneUrls[linkNurl]) {
                     pendingUrls.push(linkNurl);
@@ -78,7 +77,7 @@ const getResults = async (baseUrl, records) => {
 const createLink = (linkUrl, linkNurl, urlToRecord) => {
     // Get fragment from URL
     const index = linkUrl.indexOf('#');
-    const fragment = index > 0 ? linkUrl.substring(index+1) : '';
+    const fragment = index > 0 ? linkUrl.substring(index + 1) : '';
 
     const link = {
         url: linkUrl,
@@ -129,11 +128,11 @@ const createUrlToRecordLookupTable = async (records) => {
  */
 const saveResults = async (results, baseUrl) => {
     log.info('Saving results...');
-    await Apify.setValue('OUTPUT', results);
+    await Actor.setValue('OUTPUT', results);
 
     const html = generateHtmlReport(results, baseUrl);
 
-    await Apify.setValue('OUTPUT.html', html, { contentType: 'text/html' });
+    await Actor.setValue('OUTPUT.html', html, { contentType: 'text/html' });
 
     log.info(`HTML report was stored to:
     https://api.apify.com/v2/key-value-stores/${process.env.APIFY_DEFAULT_KEY_VALUE_STORE_ID}/records/OUTPUT.html?disableRedirect=1`);
@@ -180,7 +179,7 @@ const saveRecordToDataset = async (record, saveOnlyBrokenLinks) => {
     const { httpStatus } = filteredRecord;
 
     if (!saveOnlyBrokenLinks || (saveOnlyBrokenLinks && isErrorHttpStatus(httpStatus))) {
-        await Apify.pushData(filteredRecord);
+        await Actor.pushData(filteredRecord);
     }
 };
 
@@ -283,6 +282,10 @@ const isLinkBroken = (link) => {
     return crawled && (errorMessage || isErrorHttpStatus(httpStatus));
 };
 
+const removeLastSlash = (url) => {
+    return url.replace(/\/$/, '');
+}
+
 /**
  * Extracts broken links.
  * @param {any[]} results 
@@ -309,7 +312,7 @@ const getBrokenLinks = (results) => {
     return brokenLinks;
 };
 
-module.exports = {
+export {
     normalizeUrl,
     getResults,
     generateHtmlReport,
@@ -318,4 +321,6 @@ module.exports = {
     getBrokenLinks,
     getBaseUrlRequest,
     hasBaseDomain,
+    isErrorHttpStatus,
+    removeLastSlash
 };

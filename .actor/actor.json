@@ -1,0 +1,6 @@
+{
+	"actorSpecification": 1,
+	"name": "actor-find-broken-links",
+	"version": "0.1",
+	"buildTag": "latest"
+}
