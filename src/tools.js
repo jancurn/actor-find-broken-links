@@ -282,6 +282,10 @@ const isLinkBroken = (link) => {
     return crawled && (errorMessage || isErrorHttpStatus(httpStatus));
 };
 
+const removeLastSlash = (url) => {
+    return url.replace(/\/$/, '');
+}
+
 /**
  * Extracts broken links.
  * @param {any[]} results 
@@ -317,5 +321,6 @@ export {
     getBrokenLinks,
     getBaseUrlRequest,
     hasBaseDomain,
-    isErrorHttpStatus
+    isErrorHttpStatus,
+    removeLastSlash
 };

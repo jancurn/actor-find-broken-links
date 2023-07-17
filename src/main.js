@@ -4,7 +4,7 @@ import _ from 'underscore';
 
 import { getPageRecord, getAndEnqueueLinkUrls } from './page-handler.js';
 import { sendEmailNotification } from './notification.js';
-import { normalizeUrl, getResults, saveResults, getBrokenLinks, saveRecordToDataset, getBaseUrlRequest, hasBaseDomain, isErrorHttpStatus } from './tools.js';
+import { normalizeUrl, getResults, saveResults, getBrokenLinks, saveRecordToDataset, getBaseUrlRequest, hasBaseDomain, isErrorHttpStatus, removeLastSlash } from './tools.js';
 import { DEFAULT_VIEWPORT, NAVIGATION_TIMEOUT, MAX_REQUEST_RETRIES } from './consts.js';
 
 
@@ -44,12 +44,8 @@ const crawler = new PuppeteerCrawler({
         await sleep(10000);
 
         // Make sure both urls don't end with slash.
-        if (url.endsWith("/")) {
-            url = url.slice(0, -1);
-        }
-        if (loadedUrl.endsWith("/")) {
-            loadedUrl = loadedUrl.slice(0, -1);
-        }
+        url = removeLastSlash(url);
+        loadedUrl = removeLastSlash(loadedUrl);
 
         // if the user enters with `http` and the page redirects to `https`
         if (url.replace('http://', 'https://') !== loadedUrl.replace('http://', 'https://')) {
