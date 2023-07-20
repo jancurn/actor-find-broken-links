@@ -49,7 +49,7 @@ const crawler = new PuppeteerCrawler({
 
         // if the user enters with `http` and the page redirects to `https`
         if (url.replace('http://', 'https://') !== loadedUrl.replace('http://', 'https://')) {
-            await context.page.waitForNavigation();
+            await context.page.waitForNavigation({ timeout: 20000, waitUntil: 'domcontentloaded' }).catch(() => {});
         }
 
         const record = await getPageRecord(context, crawlSubdomains);
